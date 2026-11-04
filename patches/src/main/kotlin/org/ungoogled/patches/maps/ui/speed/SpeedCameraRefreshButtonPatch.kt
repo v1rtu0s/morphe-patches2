@@ -2,6 +2,7 @@ package org.ungoogled.patches.maps.ui.speed
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.methodCall
 import app.morphe.patcher.string
 import com.android.tools.smali.dexlib2.Opcode
 import org.ungoogled.patches.maps.ui.SHAPES
@@ -22,14 +23,9 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
     execute {
         markPatched("speedCameraRefreshButtonPatched")
 
-        // Find the main map fragment by its trace label, then hook onViewCreated
-        // The map fragment has a trace label "MapFragment" and onViewCreated calls getMapAsync
-        object MapFragmentClassFingerprint : Fingerprint(
-            filters = listOf(string("MapFragment")),
-        )
-
+        // Find the main map fragment's onViewCreated by its unique call to getMapAsync
+        // The map fragment is the only fragment that calls getMapAsync in onViewCreated
         object MapFragmentOnViewCreatedFingerprint : Fingerprint(
-            classFingerprint = MapFragmentClassFingerprint,
             returnType = "V",
             parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
             filters = listOf(
