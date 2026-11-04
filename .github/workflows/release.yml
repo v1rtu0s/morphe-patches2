@@ -53,6 +53,7 @@ jobs:
         id: release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
       - name: Attest Build Provenance
         if: steps.release.outputs.new_release_published == 'true'
@@ -69,7 +70,7 @@ jobs:
         run: ./gradlew :patches:buildAndroid clean --no-daemon
 
       - name: Upload patches artifact
-        if: steps.release.outputs.new_release_published != 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: patches-mpp
