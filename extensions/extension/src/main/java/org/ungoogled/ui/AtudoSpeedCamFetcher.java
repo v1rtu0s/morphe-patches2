@@ -1,6 +1,8 @@
 package org.ungoogled.ui;
 
 import android.location.Location;
+import android.location.LocationManager;
+import android.content.Context;
 import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -169,6 +171,41 @@ public class AtudoSpeedCamFetcher {
             return fetched;
         }
         return Collections.emptyList();
+    }
+
+    /** Manual refresh triggered from the map button. Bypasses hysteresis, fetches now. */
+    public static void refreshNow(Context context, Runnable onComplete) {
+        if (!liveFeedEnabled) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+        // Get last known location from the same source SpeedCameras uses
+        LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        if (lm == null) {
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+        try {
+            Location known = null;
+            for (String p : lm.getAllProviders()) {
+                Location k = lm.getLastKnownLocation(p);
+                if (k != null && (known == null || k.getElapsedRealtimeNanos() > known.getElapsedRealtimeNanos())) {
+                    known = k;
+                }
+            }
+            if (known != null) {
+                // Force fetch by temporarily resetting the hysteresis
+                lastFetchTimeMs = 0;
+                lastFetchLat = Double.NaN;
+                lastFetchLon = Double.NaN;
+                onLocationChanged(known.getLatitude(), known.getLongitude(), known.getSpeed(), onComplete);
+            } else {
+                if (onComplete != null) onComplete.run();
+            }
+        } catch (Throwable t) {
+            Log.w(TAG, "Manual refresh failed", t);
+            if (onComplete != null) onComplete.run();
+        }
     }
 
     /**
