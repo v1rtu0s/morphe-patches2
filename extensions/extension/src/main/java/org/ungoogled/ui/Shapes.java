@@ -16,6 +16,15 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.widget.Toast;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.os.Handler;
+import android.os.Looper;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import android.view.Window;
 import android.widget.TextView;
 
@@ -2253,4 +2262,62 @@ public final class Shapes {
     public static void setOval(Outline o, Rect rect) {
         if (RECT) o.setRoundRect(rect, r()); else o.setOval(rect);
     }
+
+    /** Adds a FloatingActionButton to the map view for manually refreshing live speed cameras. */
+    public static void addSpeedCameraRefreshButton(View mapView) {
+        if (mapView == null) return;
+        Context context = mapView.getContext();
+        if (context == null) return;
+
+        // Only add if speed cameras are enabled and live feed is on
+        if (!SpeedCameras.enabled(context) || !AtudoSpeedCamFetcher.isLiveFeedEnabled()) return;
+
+        // Check if button already exists (by tag)
+        View existing = ((ViewGroup) mapView).findViewWithTag("ua_speed_cam_refresh");
+        if (existing != null) return;
+
+        FloatingActionButton fab = new FloatingActionButton(context);
+        fab.setTag("ua_speed_cam_refresh");
+        fab.setImageResource(android.R.drawable.ic_menu_rotate); // Use a refresh-like icon
+        fab.setContentDescription("Refresh live speed cameras");
+        fab.setBackgroundTintList(ColorStateList.valueOf(
+            context.getColor(android.R.color.holo_blue_dark)));
+        fab.setSize(FloatingActionButton.SIZE_MINI);
+
+        // Add to map view (assuming it's a ViewGroup)
+        if (mapView instanceof ViewGroup) {
+            ViewGroup container = (ViewGroup) mapView;
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.END | Gravity.BOTTOM
+            );
+            params.setMargins(0, 0, 32, 180); // Above the existing FABs
+            container.addView(fab, params);
+        }
+
+        fab.setOnClickListener(v -> {
+            // Show loading animation
+            fab.setImageResource(android.R.drawable.ic_menu_rotate);
+            ObjectAnimator rotation = ObjectAnimator.ofFloat(fab, "rotation", 0f, 360f);
+            rotation.setDuration(1000);
+            rotation.setRepeatCount(ValueAnimator.INFINITE);
+            rotation.setRepeatMode(ValueAnimator.RESTART);
+            rotation.start();
+            fab.setTag(rotation);
+
+            // Trigger refresh
+            AtudoSpeedCamFetcher.refreshNow(context, () -> {
+                // Stop animation on main thread
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    ObjectAnimator anim = (ObjectAnimator) fab.getTag();
+                    if (anim != null) anim.cancel();
+                    fab.setImageResource(android.R.drawable.ic_menu_rotate);
+                    // Show brief toast
+                    Toast.makeText(context, "Speed cameras refreshed", Toast.LENGTH_SHORT).show();
+                });
+            });
+        });
+    }
+
 }
