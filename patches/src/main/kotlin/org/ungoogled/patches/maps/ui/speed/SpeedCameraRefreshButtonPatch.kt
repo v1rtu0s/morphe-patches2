@@ -22,11 +22,14 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
     execute {
         markPatched("speedCameraRefreshButtonPatched")
 
-        // TODO: Find the correct fingerprint for the main map fragment/activity
-        // The button should be added to the map view hierarchy in onCreateView or onViewCreated
-        // Example fingerprint structure:
-        /*
+        // Find the main map fragment by its trace label, then hook onViewCreated
+        // The map fragment has a trace label "MapFragment" and onViewCreated calls getMapAsync
+        object MapFragmentClassFingerprint : Fingerprint(
+            filters = listOf(string("MapFragment")),
+        )
+
         object MapFragmentOnViewCreatedFingerprint : Fingerprint(
+            classFingerprint = MapFragmentClassFingerprint,
             returnType = "V",
             parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
             filters = listOf(
@@ -42,7 +45,6 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
                 invoke-static { p0 }, $SHAPES->addSpeedCameraRefreshButton(Landroid/view/View;)V
             """)
         }
-        */
     }
 }
 
