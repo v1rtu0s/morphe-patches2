@@ -24,48 +24,6 @@ import java.util.zip.GZIPInputStream;
  * Piggybacks on Google Maps' existing location ticks and merges directly into the
  * Morphe Overpass/Waze camera pipeline.
  */
-public class AtudoSpeedCamFetcher {
-    private static final String TAG = "MorpheAtudo";
-
-    private static final String[] CDN_HOSTS = {
-        "https://cdn2.atudo.net",
-        "https://cdn3.atudo.net",
-        "https://cdn4.atudo.net"
-    };
-
-    // Hysteresis parameters to eliminate idle battery & data drain
-    private static final long MIN_FETCH_INTERVAL_MS = 5 * 60 * 1000L; // 5 minutes
-    private static final float MIN_MOVEMENT_METERS = 600.0f;          // 600 meters
-    private static final double BOX_HALF_SPAN_DEG = 0.18;             // ~20 km radius (~40x40 km box)
-    private static final double EDGE_BUFFER_DEG = 0.03;               // ~3.3 km edge trigger
-
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    private static long lastFetchTimeMs = 0;
-    private static double lastFetchLat = Double.NaN;
-    private static double lastFetchLon = Double.NaN;
-    private static double cachedMinLat, cachedMinLon, cachedMaxLat, cachedMaxLon;
-    private static volatile boolean isFetching = false;
-    private static volatile boolean liveFeedEnabled = true;
-
-    public static void setLiveFeedEnabled(boolean enabled) {
-        liveFeedEnabled = enabled;
-        if (!enabled) {
-            activeCameras = Collections.emptyList();
-        }
-    }
-
-    public static boolean isLiveFeedEnabled() {
-        return liveFeedEnabled;
-    }
-
-    public static class AtudoCamera {
-        public final String id;
-        public final double lat;
-        public final double lon;
-        public final int type;          // 0-6: mobile/fixed speed & red light traps, 101+: hazards
-        public final int speedLimit;    // vmax in km/h (0 if unspecified)
-        public final int confirmations; // counter from community reports
         public final String street;
         public final String content;
 
