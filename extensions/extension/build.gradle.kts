@@ -24,4 +24,6 @@ configurations.configureEach {
 dependencies {
     // Cronet's proxy API, which Maps bundles; see stub/.
     compileOnly(project(":extensions:extension:stub"))
+    // Material Components for FloatingActionButton; Maps already bundles it.
+    compileOnly("com.google.android.material:material:1.12.0")
 }
