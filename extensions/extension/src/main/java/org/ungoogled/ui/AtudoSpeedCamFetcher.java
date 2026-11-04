@@ -46,6 +46,18 @@ public class AtudoSpeedCamFetcher {
     private static double lastFetchLon = Double.NaN;
     private static double cachedMinLat, cachedMinLon, cachedMaxLat, cachedMaxLon;
     private static volatile boolean isFetching = false;
+    private static volatile boolean liveFeedEnabled = true;
+
+    public static void setLiveFeedEnabled(boolean enabled) {
+        liveFeedEnabled = enabled;
+        if (!enabled) {
+            activeCameras = Collections.emptyList();
+        }
+    }
+
+    public static boolean isLiveFeedEnabled() {
+        return liveFeedEnabled;
+    }
 
     public static class AtudoCamera {
         public final String id;
@@ -80,6 +92,7 @@ public class AtudoSpeedCamFetcher {
     private static volatile List<AtudoCamera> activeCameras = Collections.emptyList();
 
     public static List<AtudoCamera> getActiveCameras() {
+        if (!liveFeedEnabled) return Collections.emptyList();
         return activeCameras;
     }
 
@@ -87,7 +100,7 @@ public class AtudoSpeedCamFetcher {
      * Triggered from the existing GPS Location update hook in the Maps extension.
      */
     public static void onLocationChanged(double lat, double lon, float speedMetersPerSec, Runnable onUpdateCallback) {
-        if (isFetching) return;
+        if (!liveFeedEnabled || isFetching) return;
 
         long now = System.currentTimeMillis();
 
@@ -149,6 +162,7 @@ public class AtudoSpeedCamFetcher {
      * Synchronous fetch for direct injection inside the Overpass download thread.
      */
     public static List<AtudoCamera> fetchBoundingBoxSync(double minLat, double minLon, double maxLat, double maxLon) {
+        if (!liveFeedEnabled) return Collections.emptyList();
         List<AtudoCamera> fetched = fetchFromCdn(minLat, minLon, maxLat, maxLon);
         if (fetched != null) {
             activeCameras = fetched;
@@ -163,6 +177,8 @@ public class AtudoSpeedCamFetcher {
      */
     public static JSONArray toOverpassElementsJson(List<AtudoCamera> cameras) {
         JSONArray elements = new JSONArray();
+        if (!liveFeedEnabled) return elements;
+        
         for (AtudoCamera cam : cameras) {
             try {
                 JSONObject node = new JSONObject();
