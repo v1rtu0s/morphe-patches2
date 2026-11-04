@@ -829,6 +829,16 @@ public final class SpeedCameras {
 
     static List<Camera> parsePlates(JSONObject root) throws Exception {
         JSONArray els = root.getJSONArray("elements");
+        // --- Injected Blitzer.de (Atudo) Live Data ---
+        if (els != null) {
+            org.json.JSONArray atudoArr = AtudoSpeedCamFetcher.toOverpassElementsJson(
+                AtudoSpeedCamFetcher.getActiveCameras()
+            );
+            for (int _ai = 0; _ai < atudoArr.length(); _ai++) {
+                els.put(atudoArr.optJSONObject(_ai));
+            }
+        }
+
         List<Camera> out = new ArrayList<>(els.length());
         for (int i = 0; i < els.length(); i++) {
             JSONObject el = els.getJSONObject(i);
