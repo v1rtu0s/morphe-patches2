@@ -395,6 +395,10 @@ public final class CustomizationActivity extends Activity {
                 camsMap.setEnabled(on);
             });
             camsMap.setOnCheckedChangeListener((CompoundButton b, boolean on) -> SpeedCameras.setOnMap(this, on));
+            Switch liveAtudo = new Switch(this);
+            liveAtudo.setChecked(AtudoSpeedCamFetcher.isLiveFeedEnabled());
+            body.addView(toggleRow("Live Blitzer.de speed cameras", "Live mobile & fixed traps from Blitzer.de/Atudo, updated as you drive", liveAtudo));
+            liveAtudo.setOnCheckedChangeListener((CompoundButton b, boolean on) -> AtudoSpeedCamFetcher.setLiveFeedEnabled(on));
         }
 
         if (Shapes.wazeAlertsPatched()) {
