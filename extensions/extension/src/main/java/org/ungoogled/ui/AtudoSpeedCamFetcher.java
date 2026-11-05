@@ -98,6 +98,16 @@ public class AtudoSpeedCamFetcher {
         return activeCameras;
     }
 
+    /** Returns only mobile speed cameras (types 0, 1, 2, 6) for debugging display. */
+    public static List<AtudoCamera> getMobileCameras() {
+        if (!liveFeedEnabled) return Collections.emptyList();
+        List<AtudoCamera> mobile = new ArrayList<>();
+        for (AtudoCamera cam : activeCameras) {
+            if (cam.isMobileTrap()) mobile.add(cam);
+        }
+        return mobile;
+    }
+
     /**
      * Triggered from the existing GPS Location update hook in the Maps extension.
      */
