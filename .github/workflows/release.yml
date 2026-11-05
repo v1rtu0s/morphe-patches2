@@ -63,11 +63,11 @@ jobs:
           subject-name: 'Morphe Patches ${{ steps.release.outputs.new_release_git_tag }}'
           subject-path: patches/build/libs/patches-*.mpp
 
-      - name: Verify project compilation (Fallback)
+      - name: Build patches artifact (Fallback)
         if: steps.release.outputs.new_release_published != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew :patches:clean :patches:buildAndroid --no-daemon
+        run: ./gradlew :patches:clean :patches:generatePatchesList --no-daemon
 
       - name: Upload patches artifact
         if: always()
