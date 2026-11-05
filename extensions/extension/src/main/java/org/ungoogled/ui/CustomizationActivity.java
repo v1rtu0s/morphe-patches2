@@ -399,6 +399,14 @@ public final class CustomizationActivity extends Activity {
             liveAtudo.setChecked(AtudoSpeedCamFetcher.isLiveFeedEnabled());
             body.addView(toggleRow("Live Blitzer.de speed cameras", "Live mobile & fixed traps from Blitzer.de/Atudo, updated as you drive", liveAtudo));
             liveAtudo.setOnCheckedChangeListener((CompoundButton b, boolean on) -> AtudoSpeedCamFetcher.setLiveFeedEnabled(on));
+            // Debug: show mobile speedcams fetched through Atudo pipeline
+            LinearLayout mobileCamsRow = rowBase("Mobile speedcams (debug)", mobileCameraStatus());
+            TextView mobileCamsSub = (TextView) ((LinearLayout) mobileCamsRow.getChildAt(0)).getChildAt(1);
+            mobileCamsRow.setOnClickListener(v -> {
+                mobileCamsSub.setText(mobileCameraStatus());
+            });
+            body.addView(mobileCamsRow);
+            live(() -> mobileCamsSub.setText(mobileCameraStatus()));
         }
 
         if (Shapes.wazeAlertsPatched()) {
