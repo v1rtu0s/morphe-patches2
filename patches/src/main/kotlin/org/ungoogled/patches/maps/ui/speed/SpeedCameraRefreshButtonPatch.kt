@@ -4,13 +4,13 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.string
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import com.android.tools.smali.dexlib2.Opcode
 import org.ungoogled.patches.maps.ui.SHAPES
 import org.ungoogled.patches.maps.ui.activityContextHookPatch
 import org.ungoogled.patches.maps.ui.markPatched
 import org.ungoogled.patches.maps.ui.sharedExtensionPatch
 import org.ungoogled.patches.shared.Constants.COMPATIBILITY_MAPS
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 
 /** Adds a refresh button to the main map view for manually reloading live Blitzer.de speed cameras. */
 internal val speedCameraRefreshButtonPatch = bytecodePatch(
@@ -24,20 +24,19 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
     execute {
         markPatched("speedCameraRefreshButtonPatched")
 
-        // Find the main map fragment's onViewCreated by its unique call to getMapAsync
-        // The map fragment is the only fragment that calls getMapAsync in onViewCreated
-        // Use anonymous object to avoid "cannot be local" error
-        Fingerprint(
-            returnType = "V",
-            parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
+        // Find any method that calls getMapAsync - this is the Google Maps API to get the map
+        // The map fragment's onViewCreated or onMapReady will call this
+        object GetMapAsyncFingerprint : Fingerprint(
             filters = listOf(
-                string("onViewCreated"),
                 methodCall(name = "getMapAsync")
             )
-        ).let { fp ->
+        )
+
+        GetMapAsyncFingerprint.let { fp ->
+            // Add at the end of the method that calls getMapAsync
             val endOfMethod = fp.method.implementation!!.instructions.lastIndex
             fp.method.addInstructions(endOfMethod, """
-                // Get the map fragment's view
+                // Get the map fragment's view (first parameter is the fragment/view)
                 invoke-static { p0 }, $SHAPES->addSpeedCameraRefreshButton(Landroid/view/View;)V
             """)
         }
