@@ -25,16 +25,15 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
 
         // Find the main map fragment's onViewCreated by its unique call to getMapAsync
         // The map fragment is the only fragment that calls getMapAsync in onViewCreated
-        object MapFragmentOnViewCreatedFingerprint : Fingerprint(
+        // Use anonymous object to avoid "cannot be local" error
+        Fingerprint(
             returnType = "V",
             parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
             filters = listOf(
                 string("onViewCreated"),
                 methodCall(name = "getMapAsync")
             )
-        )
-
-        MapFragmentOnViewCreatedFingerprint.let { fp ->
+        ).let { fp ->
             val endOfMethod = fp.method.implementation!!.instructions.lastIndex
             fp.method.addInstructions(endOfMethod, """
                 // Get the map fragment's view
