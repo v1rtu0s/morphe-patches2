@@ -50,17 +50,9 @@ jobs:
 
       - name: Delete existing tag if present
         run: |
-          # Get version from gradle.properties (with or without -SNAPSHOT)
-          VERSION=$(cat gradle.properties | grep '^version=' | cut -d= -f2 | tr -d ' ' | sed 's/-SNAPSHOT//')
-          TAG="v$VERSION"
-          echo "Current version from gradle.properties: $VERSION"
-          echo "Checking for tag: $TAG"
-          
-          # Check for semantic-release expected tag (v1.1.0 since last was v1.0.0 and we have feat: commits)
           SEMVER_TAG="v1.1.0"
           echo "Expected semantic-release tag: $SEMVER_TAG"
           
-          # Delete semantic-release tag if it exists locally
           if git rev-parse "$SEMVER_TAG" >/dev/null 2>&1; then
             echo "Deleting semantic-release tag locally: $SEMVER_TAG"
             git tag -d "$SEMVER_TAG"
@@ -68,21 +60,6 @@ jobs:
           elif git ls-remote --tags origin "$SEMVER_TAG" | grep -q "$SEMVER_TAG"; then
             echo "Deleting remote semantic-release tag: $SEMVER_TAG"
             git push --delete origin "$SEMVER_TAG" 2>/dev/null || true
-          fi
-          
-          echo "Checking for tag: $TAG"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG found locally, deleting..."
-            git tag -d "$TAG"
-            git push --delete origin "$TAG" 2>/dev/null || true
-          else
-            echo "Tag $TAG not found locally, checking remote..."
-            if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
-              echo "Tag $TAG found on remote, deleting remote..."
-              git push --delete origin "$TAG" 2>/dev/null || true
-            else
-              echo "Tag $TAG not found on remote either"
-            fi
           fi
 
       - name: Run Semantic Release
@@ -105,10 +82,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew :patches:clean :patches:buildAndroid --no-daemon
-
-      - name: Generate patches list
-        if: steps.release.outputs.new_release_published != 'true'
-        run: ./gradlew :patches:generatePatchesList --no-daemon
 
       - name: Upload patches artifact
         if: always()
