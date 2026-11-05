@@ -56,26 +56,18 @@ jobs:
           echo "Current version from gradle.properties: $VERSION"
           echo "Checking for tag: $TAG"
           
-          # Also check what semantic-release will create by looking at commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            echo "Last tag: $LAST_TAG"
-            # Count feat commits since last tag
-            FEAT_COUNT=$(git log ${LAST_TAG}..HEAD --oneline --grep="^feat:" 2>/dev/null | wc -l)
-            if [ "$FEAT_COUNT" -gt 0 ]; then
-              # Minor version bump expected
-              SEMVER_TAG=$(echo $LAST_TAG | sed -E 's/v([0-9]+)\.([0-9]+)\.([0-9]+)/v.$((+1)).0/')
-              echo "Expected semantic-release tag: $SEMVER_TAG (due to $FEAT_COUNT feat commit(s))"
-              # Try to delete the semantic-release tag too
-              if git rev-parse "$SEMVER_TAG" >/dev/null 2>&1; then
-                echo "Deleting semantic-release tag: $SEMVER_TAG"
-                git tag -d "$SEMVER_TAG"
-                git push --delete origin "$SEMVER_TAG" 2>/dev/null || true
-              elif git ls-remote --tags origin "$SEMVER_TAG" | grep -q "$SEMVER_TAG"; then
-                echo "Deleting remote semantic-release tag: $SEMVER_TAG"
-                git push --delete origin "$SEMVER_TAG" 2>/dev/null || true
-              fi
-            fi
+          # Check for semantic-release expected tag (v1.1.0 since last was v1.0.0 and we have feat: commits)
+          SEMVER_TAG="v1.1.0"
+          echo "Expected semantic-release tag: $SEMVER_TAG"
+          
+          # Delete semantic-release tag if it exists locally
+          if git rev-parse "$SEMVER_TAG" >/dev/null 2>&1; then
+            echo "Deleting semantic-release tag locally: $SEMVER_TAG"
+            git tag -d "$SEMVER_TAG"
+            git push --delete origin "$SEMVER_TAG" 2>/dev/null || true
+          elif git ls-remote --tags origin "$SEMVER_TAG" | grep -q "$SEMVER_TAG"; then
+            echo "Deleting remote semantic-release tag: $SEMVER_TAG"
+            git push --delete origin "$SEMVER_TAG" 2>/dev/null || true
           fi
           
           echo "Checking for tag: $TAG"
