@@ -4,6 +4,7 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.string
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import com.android.tools.smali.dexlib2.Opcode
 import org.ungoogled.patches.maps.ui.SHAPES
 import org.ungoogled.patches.maps.ui.activityContextHookPatch
