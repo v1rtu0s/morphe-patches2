@@ -99,6 +99,7 @@ public final class Shapes {
     public static boolean flockCamerasPatched() { return false; }
     public static boolean flockAvoidPatched() { return false; }
     public static boolean wazeAlertsPatched() { return false; }
+    public static boolean speedCameraRefreshButtonPatched() { return false; }
     public static boolean playingMediaPatched() { return false; }
     /** Offline saved places, saving to the phone (not microG Maps', which saves to the account). */
     public static boolean localSavedPatched() { return false; }
