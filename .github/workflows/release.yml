@@ -51,10 +51,19 @@ jobs:
       - name: Delete existing tag if present
         run: |
           TAG=$(cat gradle.properties | grep '^version=' | cut -d= -f2 | sed 's/-SNAPSHOT//' | xargs -I {} echo v{})
+          echo "Checking for tag: $TAG"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists, deleting..."
+            echo "Tag $TAG found locally, deleting..."
             git tag -d "$TAG"
             git push --delete origin "$TAG" 2>/dev/null || true
+          else
+            echo "Tag $TAG not found locally, checking remote..."
+            if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+              echo "Tag $TAG found on remote, deleting remote..."
+              git push --delete origin "$TAG" 2>/dev/null || true
+            else
+              echo "Tag $TAG not found on remote either"
+            fi
           fi
 
       - name: Run Semantic Release
