@@ -24,15 +24,15 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
     execute {
         markPatched("speedCameraRefreshButtonPatched")
 
-        // Find any method that calls getMapAsync - this is the Google Maps API to get the map
-        // The map fragment's onViewCreated or onMapReady will call this
-        // Use anonymous object to avoid "cannot be local" error
-        Fingerprint(
+        // Find the map fragment's onViewCreated by its trace label - Maps names its map fragment
+        object MapFragmentOnViewCreatedFingerprint : Fingerprint(
             filters = listOf(
+                string("onViewCreated"),
                 methodCall(name = "getMapAsync")
             )
-        ).let { fp ->
-            // Add at the end of the method that calls getMapAsync
+        )
+
+        MapFragmentOnViewCreatedFingerprint.let { fp ->
             val endOfMethod = fp.method.implementation!!.instructions.lastIndex
             fp.method.addInstructions(endOfMethod, """
                 // Get the map fragment's view (first parameter is the fragment/view)
