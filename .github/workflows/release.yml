@@ -48,6 +48,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Delete existing tag if present
+        run: |
+          TAG=$(cat gradle.properties | grep '^version=' | cut -d= -f2 | sed 's/-SNAPSHOT//' | xargs -I {} echo v{})
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, deleting..."
+            git tag -d "$TAG"
+            git push --delete origin "$TAG" 2>/dev/null || true
+          fi
+
       - name: Run Semantic Release
         uses: cycjimmy/semantic-release-action@v6
         id: release
