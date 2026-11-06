@@ -16,6 +16,7 @@ import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.util.List;
 
 /**
  * "Customization" screen, reached from the account sheet. Laid out like Maps'
