@@ -79,7 +79,7 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: 'Morphe Patches ${{ steps.release.outputs.new_release_git_tag }}'
-          subject-path: patches/build/libs/patches-*.mpp
+          subject-path: patches/build/libs/*.mpp
 
       - name: Build patches artifact (Fallback)
         if: steps.release.outputs.new_release_published != 'true'
@@ -92,4 +92,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: patches-mpp
-          path: patches/build/libs/patches-*.mpp
+          path: patches/build/libs/*.mpp
