@@ -466,7 +466,6 @@ public final class CustomizationActivity extends Activity {
         }
         return out.toString();
     }
-
     /** Runs [update] every second while this screen is open. */
     private void live(Runnable update) {
         Handler h = new Handler(Looper.getMainLooper());
