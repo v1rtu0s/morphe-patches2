@@ -399,6 +399,14 @@ public final class CustomizationActivity extends Activity {
             liveAtudo.setChecked(AtudoSpeedCamFetcher.isLiveFeedEnabled());
             body.addView(toggleRow("Live Blitzer.de speed cameras", "Live mobile & fixed traps from Blitzer.de/Atudo, updated as you drive", liveAtudo));
             liveAtudo.setOnCheckedChangeListener((CompoundButton b, boolean on) -> AtudoSpeedCamFetcher.setLiveFeedEnabled(on));
+            // Debug: show mobile speedcams fetched through Atudo pipeline
+            LinearLayout mobileCamsRow = rowBase("Mobile speedcams (debug)", mobileCameraStatus());
+            TextView mobileCamsSub = (TextView) ((LinearLayout) mobileCamsRow.getChildAt(0)).getChildAt(1);
+            mobileCamsRow.setOnClickListener(v -> {
+                mobileCamsSub.setText(mobileCameraStatus());
+            });
+            body.addView(mobileCamsRow);
+            live(() -> mobileCamsSub.setText(mobileCameraStatus()));
         }
 
         if (Shapes.wazeAlertsPatched()) {
@@ -442,22 +450,8 @@ public final class CustomizationActivity extends Activity {
     /** "Speed cameras: 42 cameras around you", and Flock cameras' line below it when that patch is in. */
     private String cameraStatus() {
         String out = "Speed cameras: " + SpeedCameras.status(false);
-        if (Shapes.flockCamerasPatched()) out += "
-Flock cameras: " + SpeedCameras.status(true);
+        if (Shapes.flockCamerasPatched()) out += "\nFlock cameras: " + SpeedCameras.status(true);
         return out;
-    }
-
-    private String mobileCameraStatus() {
-        List<AtudoSpeedCamFetcher.AtudoCamera> mobile = AtudoSpeedCamFetcher.getMobileCameras();
-        if (mobile.isEmpty()) return "No mobile speedcams fetched";
-        StringBuilder out = new StringBuilder();
-        out.append("Mobile speedcams: ").append(mobile.size());
-        for (AtudoSpeedCamFetcher.AtudoCamera cam : mobile) {
-            out.append("
-  ").append(cam.type == 4 ? "Red light" : "Mobile").append(" @ ").append(String.format("%.4f, %.4f", cam.lat, cam.lon));
-            if (cam.speedLimit > 0) out.append(" ").append(cam.speedLimit).append("km/h");
-        }
-        return out.toString();
     }
 
     /** Runs [update] every second while this screen is open. */
