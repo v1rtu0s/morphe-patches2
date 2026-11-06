@@ -50,7 +50,7 @@ jobs:
 
       - name: Delete existing tag if present
         run: |
-          SEMVER_TAG="v1.1.0"
+          SEMVER_TAG="v1.2.0"
           echo "Expected semantic-release tag: $SEMVER_TAG"
           
           if git rev-parse "$SEMVER_TAG" >/dev/null 2>&1; then
@@ -61,6 +61,10 @@ jobs:
             echo "Deleting remote semantic-release tag: $SEMVER_TAG"
             git push --delete origin "$SEMVER_TAG" 2>/dev/null || true
           fi
+
+      - name: Fetch Git notes for semantic-release
+        run: |
+          git fetch origin refs/notes/semantic-release-v1.2.0:refs/notes/semantic-release-v1.2.0 2>/dev/null || true
 
       - name: Run Semantic Release
         uses: cycjimmy/semantic-release-action@v6
@@ -89,4 +93,3 @@ jobs:
         with:
           name: patches-mpp
           path: patches/build/libs/patches-*.mpp
-
