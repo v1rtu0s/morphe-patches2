@@ -24,10 +24,10 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
     execute {
         markPatched("speedCameraRefreshButtonPatched")
 
-        // Find the map fragment's onViewCreated by its trace label - Maps names its map fragment
+        // Target the map fragment's onViewCreated by its trace label (Maps names it SupportMapFragment or MapFragment)
         Fingerprint(
+            traceLabel = "SupportMapFragment.onViewCreated",
             filters = listOf(
-                string("onViewCreated"),
                 methodCall(name = "getMapAsync")
             )
         ).let { fp ->
