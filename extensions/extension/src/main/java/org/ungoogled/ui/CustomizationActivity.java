@@ -460,8 +460,7 @@ public final class CustomizationActivity extends Activity {
         StringBuilder out = new StringBuilder();
         out.append("Mobile speedcams: ").append(mobile.size());
         for (AtudoSpeedCamFetcher.AtudoCamera cam : mobile) {
-            out.append("
-  ").append(cam.type == 4 ? "Red light" : "Mobile").append(" @ ").append(String.format("%.4f, %.4f", cam.lat, cam.lon));
+            out.append("\n  ").append(cam.type == 4 ? "Red light" : "Mobile").append(" @ ").append(String.format("%.4f, %.4f", cam.lat, cam.lon));
             if (cam.speedLimit > 0) out.append(" ").append(cam.speedLimit).append("km/h");
         }
         return out.toString();
