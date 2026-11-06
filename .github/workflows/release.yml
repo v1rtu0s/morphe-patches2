@@ -79,20 +79,20 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: 'Morphe Patches ${{ steps.release.outputs.new_release_git_tag }}'
-          subject-path: patches/build/libs/*.mpp
+          subject-path: patches/build/libs/patches-*.mpp
 
       - name: Build patches artifact (Fallback)
         if: steps.release.outputs.new_release_published != 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew :patches:clean :patches:generatePatchesList --no-daemon
+        run: ./gradlew :patches:clean :patches:buildAndroid --no-daemon
 
       - name: Upload patches artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: patches-mpp
-          path: patches/build/libs/*.mpp
+          path: patches/build/libs/patches-*.mpp
 
       - name: Create or update release
         if: always()
