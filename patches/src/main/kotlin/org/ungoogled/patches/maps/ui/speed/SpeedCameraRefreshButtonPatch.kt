@@ -26,8 +26,10 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
 
         // Target the map fragment's onViewCreated by its trace label (Maps names it SupportMapFragment or MapFragment)
         Fingerprint(
-            traceLabel = "SupportMapFragment.onViewCreated",
+            returnType = "V",
+            parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
             filters = listOf(
+                string("SupportMapFragment.onViewCreated"),
                 methodCall(name = "getMapAsync")
             )
         ).let { fp ->
