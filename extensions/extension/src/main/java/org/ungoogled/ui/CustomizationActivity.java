@@ -454,6 +454,19 @@ public final class CustomizationActivity extends Activity {
         return out;
     }
 
+    private String mobileCameraStatus() {
+        List<AtudoSpeedCamFetcher.AtudoCamera> mobile = AtudoSpeedCamFetcher.getMobileCameras();
+        if (mobile.isEmpty()) return "No mobile speedcams fetched";
+        StringBuilder out = new StringBuilder();
+        out.append("Mobile speedcams: ").append(mobile.size());
+        for (AtudoSpeedCamFetcher.AtudoCamera cam : mobile) {
+            out.append("
+  ").append(cam.type == 4 ? "Red light" : "Mobile").append(" @ ").append(String.format("%.4f, %.4f", cam.lat, cam.lon));
+            if (cam.speedLimit > 0) out.append(" ").append(cam.speedLimit).append("km/h");
+        }
+        return out.toString();
+    }
+
     /** Runs [update] every second while this screen is open. */
     private void live(Runnable update) {
         Handler h = new Handler(Looper.getMainLooper());
