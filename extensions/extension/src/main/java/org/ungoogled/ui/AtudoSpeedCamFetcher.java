@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -295,30 +296,31 @@ public class AtudoSpeedCamFetcher {
     }
 
     private static List<AtudoCamera> parsePois(String jsonStr) throws Exception {
-        JSONObject root = new JSONObject(jsonStr);
-        JSONArray pois = root.optJSONArray("pois");
-        if (pois == null) return Collections.emptyList();
+            JSONObject root = new JSONObject(jsonStr);
+            JSONArray pois = root.optJSONArray("pois");
+            if (pois == null) return Collections.emptyList();
 
-        List<AtudoCamera> result = new ArrayList<>(pois.length());
-        for (int i = 0; i < pois.length(); i++) {
-            JSONObject obj = pois.getJSONObject(i);
-            String id = obj.optString("id", String.valueOf(i));
-            double lat = obj.optDouble("lat", Double.NaN);
-            double lon = obj.optDouble("lng", Double.NaN);
-            if (Double.isNaN(lat) || Double.isNaN(lon)) continue;
+            List<AtudoCamera> result = new ArrayList<>(pois.length());
+            for (int i = 0; i < pois.length(); i++) {
+                JSONObject obj = pois.getJSONObject(i);
+                String id = obj.optString("id", String.valueOf(i));
+                double lat = obj.optDouble("lat", Double.NaN);
+                double lon = obj.optDouble("lng", Double.NaN);
+                if (Double.isNaN(lat) || Double.isNaN(lon)) continue;
 
-            int type = parseIntSafe(obj.optString("type", "0"));
-            int vmax = parseIntSafe(obj.optString("vmax", "0"));
-            int counter = parseIntSafe(obj.optString("counter", "1"));
+                int type = parseIntSafe(obj.optString("type", "0"));
+                int vmax = parseIntSafe(obj.optString("vmax", "0"));
+                int counter = parseIntSafe(obj.optString("counter", "1"));
 
-            JSONObject info = obj.optJSONObject("info");
-            String street = obj.optString("street", info != null ? info.optString("street", "") : "");
-            String content = obj.optString("content", "");
+                JSONObject info = obj.optJSONObject("info");
+                String street = obj.optString("street", info != null ? info.optString("street", "") : "");
+                String content = obj.optString("content", "");
 
-            result.add(new AtudoCamera(id, lat, lon, type, vmax, counter, street, content));
+                result.add(new AtudoCamera(id, lat, lon, type, vmax, counter, street, content));
+            }
+            Log.i(TAG, "Parsed " + result.size() + " POIs, types: " + result.stream().map(c -> String.valueOf(c.type)).collect(Collectors.joining(",")));
+            return result;
         }
-        return result;
-    }
 
     private static int parseIntSafe(String val) {
         if (val == null || val.isEmpty()) return 0;

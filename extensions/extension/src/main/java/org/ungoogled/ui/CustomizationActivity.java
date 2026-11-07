@@ -404,7 +404,10 @@ public final class CustomizationActivity extends Activity {
             LinearLayout mobileCamsRow = rowBase("Mobile speedcams (debug)", mobileCameraStatus());
             TextView mobileCamsSub = (TextView) ((LinearLayout) mobileCamsRow.getChildAt(0)).getChildAt(1);
             mobileCamsRow.setOnClickListener(v -> {
-                mobileCamsSub.setText(mobileCameraStatus());
+                // Force a fetch bypassing hysteresis
+                AtudoSpeedCamFetcher.refreshNow(this, () -> {
+                    runOnUiThread(() -> mobileCamsSub.setText(mobileCameraStatus()));
+                });
             });
             body.addView(mobileCamsRow);
             live(() -> mobileCamsSub.setText(mobileCameraStatus()));
