@@ -27,6 +27,7 @@ import android.os.Looper;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import android.view.Window;
 import android.widget.TextView;
+import android.app.Activity;
 
 /**
  * Runtime half of the Ungoogled Maps UI patches, merged into Maps as a patch
