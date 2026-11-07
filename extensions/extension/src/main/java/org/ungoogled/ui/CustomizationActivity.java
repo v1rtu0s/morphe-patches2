@@ -9,6 +9,7 @@ import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -649,6 +650,9 @@ public final class CustomizationActivity extends Activity {
         r.setGravity(Gravity.CENTER_VERTICAL);
         r.setPadding(dp(20), dp(10), dp(20), dp(10));
         r.setMinimumHeight(dp(60));
+        r.setClickable(true);
+        r.setFocusable(true);
+        r.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         TextView tv = new TextView(this);
