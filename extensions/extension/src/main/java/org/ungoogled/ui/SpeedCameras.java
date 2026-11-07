@@ -456,7 +456,7 @@ public final class SpeedCameras {
                     String msg = emoji(best.kind) + " " + label(best) + " ahead";
                     Toast.makeText(c, msg, Toast.LENGTH_LONG).show();
                     // Also show notification (works during navigation)
-                    showNavAlertNotification(c, msg, Math.round(bestDistance));
+                    showNavAlertNotification(c, msg, (int) Math.round(bestDistance));
                 }
             }
 
