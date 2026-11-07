@@ -2,16 +2,24 @@ package org.ungoogled.ui;
 
 import android.app.Activity;
 import android.app.Application;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
+
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -442,10 +450,49 @@ public final class SpeedCameras {
             if (result[0] <= 50) alerted.put(cam.id, now);
         }
         android.util.Log.i("UA", "camera ahead: " + label(best) + ", " + Math.round(bestDistance) + " m");
-        Chime.camera();
-        Context c = Shapes.appContext();
-        if (c != null) Toast.makeText(c, emoji(best.kind) + " " + label(best) + " ahead", Toast.LENGTH_LONG).show();
-    }
+                Chime.camera();
+                Context c = Shapes.appContext();
+                if (c != null) {
+                    String msg = emoji(best.kind) + " " + label(best) + " ahead";
+                    Toast.makeText(c, msg, Toast.LENGTH_LONG).show();
+                    // Also show notification (works during navigation)
+                    showNavAlertNotification(c, msg, Math.round(bestDistance));
+                }
+            }
+
+            private static final String NOTIF_CHANNEL = "ua_speed_cameras";
+
+            private static void showNavAlertNotification(Context c, String msg, int distanceMeters) {
+                // Create channel (API 26+)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    NotificationChannel channel = new NotificationChannel(
+                            NOTIF_CHANNEL,
+                            "Speed Camera Alerts",
+                            NotificationManager.IMPORTANCE_HIGH
+                    );
+                    channel.setDescription("Alerts for speed cameras and red light cameras ahead");
+                    channel.setShowBadge(false);
+                    channel.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+                    NotificationManager manager = c.getSystemService(NotificationManager.class);
+                    if (manager != null) manager.createNotificationChannel(channel);
+                }
+                // Intent to open Maps
+                Intent intent = c.getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");
+                PendingIntent pending = (intent != null) ? PendingIntent.getActivity(
+                        c, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT) : null;
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(c, NOTIF_CHANNEL)
+                        .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                        .setContentTitle("Speed camera ahead")
+                        .setContentText(msg + " — " + distanceMeters + " m")
+                        .setPriority(NotificationCompat.PRIORITY_HIGH)
+                        .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
+                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                        .setAutoCancel(true)
+                        .setOnlyAlertOnce(true)
+                        .setTicker(msg);
+                if (pending != null) builder.setContentIntent(pending);
+                NotificationManagerCompat.from(c).notify((int) (System.currentTimeMillis() & 0xFFFFFFFF), builder.build());
+            }
 
     /** The cameras around [lat],[lng] that may alert: speed cameras when on, plate readers when their alert is. */
     private static List<Camera> alertable(double lat, double lng) {
