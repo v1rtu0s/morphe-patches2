@@ -1,16 +1,11 @@
 package org.ungoogled.patches.maps.ui.speed
 
-import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patcher.methodCall
-import app.morphe.patcher.string
-import com.android.tools.smali.dexlib2.Opcode
-import org.ungoogled.patches.maps.ui.SHAPES
 import org.ungoogled.patches.maps.ui.activityContextHookPatch
 import org.ungoogled.patches.maps.ui.markPatched
 import org.ungoogled.patches.maps.ui.sharedExtensionPatch
+import org.ungoogled.patches.maps.ui.speed.SpeedCamerasPatch
 import org.ungoogled.patches.shared.Constants.COMPATIBILITY_MAPS
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 
 /** Adds a refresh button to the main map view for manually reloading live Blitzer.de speed cameras. */
 internal val speedCameraRefreshButtonPatch = bytecodePatch(
@@ -19,25 +14,9 @@ internal val speedCameraRefreshButtonPatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_MAPS)
-    dependsOn(sharedExtensionPatch, activityContextHookPatch, speedCamerasPatch)
+    dependsOn(sharedExtensionPatch, activityContextHookPatch, SpeedCamerasPatch)
 
     execute {
         markPatched("speedCameraRefreshButtonPatched")
-
-        // Target the map fragment's onViewCreated by its trace label (Maps names it SupportMapFragment or MapFragment)
-        Fingerprint(
-            returnType = "V",
-            parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
-            filters = listOf(
-                string("SupportMapFragment.onViewCreated"),
-                methodCall(name = "getMapAsync")
-            )
-        ).let { fp ->
-            val endOfMethod = fp.method.implementation!!.instructions.lastIndex
-            fp.method.addInstructions(endOfMethod, """
-                // Get the map fragment's view (first parameter is the fragment/view)
-                invoke-static { p0 }, $SHAPES->addSpeedCameraRefreshButton(Landroid/view/View;)V
-            """)
-        }
     }
 }

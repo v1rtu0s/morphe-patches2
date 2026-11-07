@@ -100,6 +100,65 @@ public final class Shapes {
     public static boolean flockAvoidPatched() { return false; }
     public static boolean wazeAlertsPatched() { return false; }
     public static boolean speedCameraRefreshButtonPatched() { return false; }
+    private static boolean speedCameraRefreshButtonAdded = false;
+
+    /** Adds the speed camera refresh FAB to the main Maps activity's window. */
+    private static void maybeAddSpeedCameraRefreshButton(Activity activity) {
+        if (speedCameraRefreshButtonAdded) return;
+        if (!speedCameraRefreshButtonPatched()) return;
+        if (!AtudoSpeedCamFetcher.isLiveFeedEnabled()) return;
+
+        // Only add to the main Maps activity
+        if (!"com.google.android.apps.maps.MapsActivity".equals(activity.getClass().getName())) return;
+
+        speedCameraRefreshButtonAdded = true;
+
+        // The map view isn't ready yet at attachBaseContext, so post to main thread with retries
+        final int maxRetries = 20;
+        final Handler handler = new Handler(Looper.getMainLooper());
+        handler.post(new Runnable() {
+            int retries = 0;
+            @Override
+            public void run() {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                View decor = activity.getWindow().getDecorView();
+                if (decor == null) {
+                    if (retries < maxRetries) {
+                        retries++;
+                        handler.postDelayed(this, 200);
+                    }
+                    return;
+                }
+                // Find the map fragment's view - try common map view IDs or traverse
+                View mapView = findMapView(decor);
+                if (mapView != null) {
+                    addSpeedCameraRefreshButton(mapView);
+                } else if (retries < maxRetries) {
+                    retries++;
+                    handler.postDelayed(this, 200);
+                }
+            }
+        });
+    }
+
+    /** Try to find the map fragment's view in the view hierarchy. */
+    private static View findMapView(View root) {
+        if (root == null) return null;
+        if (root instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) root;
+            // Check if this looks like a map view (has children or specific properties)
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View child = group.getChildAt(i);
+                // Look for common map view indicators
+                if (child.getClass().getName().contains("Map") || child.getClass().getName().contains("Surface")) {
+                    return child;
+                }
+                View found = findMapView(child);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
     public static boolean playingMediaPatched() { return false; }
     /** Offline saved places, saving to the phone (not microG Maps', which saves to the account). */
     public static boolean localSavedPatched() { return false; }
@@ -721,6 +780,10 @@ public final class Shapes {
             applyProxy(base);
             if (lastBottom <= 0) loadPlacement(base);
             startPopupTicker();
+            // Add speed camera refresh FAB to main Maps activity
+            if (base instanceof Activity && speedCameraRefreshButtonPatched()) {
+                maybeAddSpeedCameraRefreshButton((Activity) base);
+            }
             if (!RECT && !BLACK) return base;
             Configuration current = base.getResources().getConfiguration();
             Configuration c = new Configuration();   // all undefined: the rest follows the screen
