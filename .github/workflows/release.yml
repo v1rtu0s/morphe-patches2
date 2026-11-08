@@ -50,13 +50,6 @@ jobs:
         with:
           packages: platforms;android-34 build-tools;34.0.0
 
-      - name: Debug Android SDK
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          ls -la "$ANDROID_HOME" 2>/dev/null || echo "ANDROID_HOME not set or dir not found"
-          ls -la "$ANDROID_SDK_ROOT" 2>/dev/null || echo "ANDROID_SDK_ROOT not set or dir not found"
-
       - name: Create local.properties
         run: echo "sdk.dir=$ANDROID_HOME" > local.properties
 
@@ -66,8 +59,8 @@ jobs:
       - name: Build patches
         env:
           ORG_GRADLE_PROJECT_gpr_user: ${{ github.actor }}
-          ORG_GRADLE_PROJECT_gpr_key: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew :patches:buildAndroid --no-daemon --info
+          ORG_GRADLE_PROJECT_gpr_key: ${{ secrets.MORPHE_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+        run: ./gradlew :patches:buildAndroid --no-daemon
 
       - name: Delete existing tag if present
         run: |
