@@ -64,7 +64,7 @@ jobs:
         run: npm install
 
       - name: Build patches
-        run: ./gradlew :patches:buildAndroid --no-daemon
+        run: ./gradlew :patches:buildAndroid --no-daemon --info
 
       - name: Delete existing tag if present
         run: |
