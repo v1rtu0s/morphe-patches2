@@ -45,6 +45,13 @@ jobs:
           node-version: 'lts/*'
           cache: 'npm'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          ndk-version: r26d
+          emulator: false
+
       - name: Install dependencies
         run: npm install
 
