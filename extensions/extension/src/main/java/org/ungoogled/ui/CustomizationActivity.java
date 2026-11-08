@@ -659,12 +659,16 @@ public final class CustomizationActivity extends Activity {
         tv.setText(label);
         tv.setTextColor(text());
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        tv.setClickable(false);
+        tv.setFocusable(false);
         col.addView(tv);
         if (sub != null) {
             TextView s = new TextView(this);
             s.setText(sub);
             s.setTextColor(summary());
             s.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            s.setClickable(false);
+            s.setFocusable(false);
             col.addView(s);
         }
         r.addView(col, new LinearLayout.LayoutParams(0, -2, 1f));
