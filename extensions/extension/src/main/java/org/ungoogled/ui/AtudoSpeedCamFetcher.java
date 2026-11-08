@@ -113,36 +113,45 @@ public class AtudoSpeedCamFetcher {
      * Triggered from the existing GPS Location update hook in the Maps extension.
      */
     public static void onLocationChanged(double lat, double lon, float speedMetersPerSec, Runnable onUpdateCallback) {
-        if (!liveFeedEnabled || isFetching) return;
-
-        long now = System.currentTimeMillis();
-
-        // 1. Do not poll if stationary (under ~7 km/h), unless we have never fetched before
-        if (!Double.isNaN(lastFetchLat) && speedMetersPerSec < 2.0f) {
-            return;
-        }
-
-        // 2. Check if user is approaching the edge of the cached bounding box
-        boolean nearBoxEdge = Double.isNaN(lastFetchLat)
-                || lat < (cachedMinLat + EDGE_BUFFER_DEG)
-                || lat > (cachedMaxLat - EDGE_BUFFER_DEG)
-                || lon < (cachedMinLon + EDGE_BUFFER_DEG)
-                || lon > (cachedMaxLon - EDGE_BUFFER_DEG);
-
-        // 3. Time + Distance Hysteresis Gate
-        if (!nearBoxEdge) {
-            if ((now - lastFetchTimeMs) < MIN_FETCH_INTERVAL_MS) {
+            Log.i(TAG, "onLocationChanged: lat=" + lat + " lon=" + lon + " speed=" + speedMetersPerSec + " liveFeedEnabled=" + liveFeedEnabled + " isFetching=" + isFetching);
+            if (!liveFeedEnabled || isFetching) {
+                Log.i(TAG, "Early return: liveFeedEnabled=" + liveFeedEnabled + " isFetching=" + isFetching);
                 return;
             }
-            float[] dist = new float[1];
-            Location.distanceBetween(lastFetchLat, lastFetchLon, lat, lon, dist);
-            if (dist[0] < MIN_MOVEMENT_METERS) {
+
+            long now = System.currentTimeMillis();
+
+            // 1. Do not poll if stationary (under ~7 km/h), unless we have never fetched before
+            if (!Double.isNaN(lastFetchLat) && speedMetersPerSec < 2.0f) {
+                Log.i(TAG, "Early return: stationary (speed=" + speedMetersPerSec + " < 2.0)");
                 return;
             }
-        }
 
-        isFetching = true;
-        executor.execute(() -> {
+            // 2. Check if user is approaching the edge of the cached bounding box
+            boolean nearBoxEdge = Double.isNaN(lastFetchLat)
+                    || lat < (cachedMinLat + EDGE_BUFFER_DEG)
+                    || lat > (cachedMaxLat - EDGE_BUFFER_DEG)
+                    || lon < (cachedMinLon + EDGE_BUFFER_DEG)
+                    || lon > (cachedMaxLon - EDGE_BUFFER_DEG);
+            Log.i(TAG, "nearBoxEdge=" + nearBoxEdge + " lastFetchLat=" + lastFetchLat + " cachedMinLat=" + cachedMinLat + " cachedMaxLat=" + cachedMaxLat + " cachedMinLon=" + cachedMinLon + " cachedMaxLon=" + cachedMaxLon);
+
+            // 3. Time + Distance Hysteresis Gate
+            if (!nearBoxEdge) {
+                if ((now - lastFetchTimeMs) < MIN_FETCH_INTERVAL_MS) {
+                    Log.i(TAG, "Early return: time hysteresis (now - lastFetchTimeMs)=" + (now - lastFetchTimeMs) + " < MIN_FETCH_INTERVAL_MS=" + MIN_FETCH_INTERVAL_MS);
+                    return;
+                }
+                float[] dist = new float[1];
+                Location.distanceBetween(lastFetchLat, lastFetchLon, lat, lon, dist);
+                if (dist[0] < MIN_MOVEMENT_METERS) {
+                    Log.i(TAG, "Early return: distance hysteresis dist=" + dist[0] + " < MIN_MOVEMENT_METERS=" + MIN_MOVEMENT_METERS);
+                    return;
+                }
+            }
+
+            Log.i(TAG, "Proceeding to fetch: lat=" + lat + " lon=" + lon);
+            isFetching = true;
+            executor.execute(() -> {
             try {
                 double minLat = lat - BOX_HALF_SPAN_DEG;
                 double maxLat = lat + BOX_HALF_SPAN_DEG;
@@ -256,44 +265,51 @@ public class AtudoSpeedCamFetcher {
     }
 
     private static List<AtudoCamera> fetchFromCdn(double minLat, double minLon, double maxLat, double maxLon) {
-        String queryPath = String.format(Locale.US,
-                "/api/1.0/vl.php?type=0,1,2,3,4,5,6&box=%.5f,%.5f,%.5f,%.5f",
-                minLat, minLon, maxLat, maxLon);
+            String queryPath = String.format(Locale.US,
+                    "/api/1.0/vl.php?type=0,1,2,3,4,5,6&box=%.5f,%.5f,%.5f,%.5f",
+                    minLat, minLon, maxLat, maxLon);
 
-        for (String host : CDN_HOSTS) {
-            HttpURLConnection conn = null;
-            try {
-                URL url = new URL(host + queryPath);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestMethod("GET");
-                conn.setConnectTimeout(6000);
-                conn.setReadTimeout(6000);
-                conn.setRequestProperty("Accept-Encoding", "gzip");
-                conn.setRequestProperty("User-Agent", "Dalvik/2.1.0 (Linux; U; Android 14)");
+            for (String host : CDN_HOSTS) {
+                HttpURLConnection conn = null;
+                try {
+                    URL url = new URL(host + queryPath);
+                    Log.i(TAG, "Fetching from " + url);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET");
+                    conn.setConnectTimeout(6000);
+                    conn.setReadTimeout(6000);
+                    conn.setRequestProperty("Accept-Encoding", "gzip");
+                    conn.setRequestProperty("User-Agent", "Dalvik/2.1.0 (Linux; U; Android 14)");
 
-                if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
-                    InputStream in = conn.getInputStream();
-                    if ("gzip".equalsIgnoreCase(conn.getContentEncoding())) {
-                        in = new GZIPInputStream(in);
-                    }
-
-                    StringBuilder sb = new StringBuilder();
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            sb.append(line);
+                    int responseCode = conn.getResponseCode();
+                    Log.i(TAG, "Response from " + host + ": " + responseCode);
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        InputStream in = conn.getInputStream();
+                        if ("gzip".equalsIgnoreCase(conn.getContentEncoding())) {
+                            in = new GZIPInputStream(in);
                         }
+
+                        StringBuilder sb = new StringBuilder();
+                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                sb.append(line);
+                            }
+                        }
+                        String jsonStr = sb.toString();
+                        Log.i(TAG, "Response length: " + jsonStr.length() + " first 200 chars: " + jsonStr.substring(0, Math.min(200, jsonStr.length())));
+                        return parsePois(jsonStr);
+                    } else {
+                        Log.w(TAG, "HTTP " + responseCode + " from " + host);
                     }
-                    return parsePois(sb.toString());
+                } catch (Exception e) {
+                    Log.w(TAG, "Atudo fetch failed on " + host + ": " + e.getMessage(), e);
+                } finally {
+                    if (conn != null) conn.disconnect();
                 }
-            } catch (Exception e) {
-                Log.w(TAG, "Atudo fetch failed on " + host + ": " + e.getMessage());
-            } finally {
-                if (conn != null) conn.disconnect();
             }
+            return null;
         }
-        return null;
-    }
 
     private static List<AtudoCamera> parsePois(String jsonStr) throws Exception {
             JSONObject root = new JSONObject(jsonStr);
