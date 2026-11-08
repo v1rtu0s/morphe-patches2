@@ -370,6 +370,9 @@ public final class SpeedCameras {
     }
 
     private static void located(Location l) {
+        if (AtudoSpeedCamFetcher.isLiveFeedEnabled()) {
+            AtudoSpeedCamFetcher.onLocationChanged(l.getLatitude(), l.getLongitude(), l.getSpeed(), () -> {});
+        }
         moved(l);
         try {
             alert(l);
