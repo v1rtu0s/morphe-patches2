@@ -300,6 +300,7 @@ public final class SpeedCameras {
         if (navigating == on) return;
         MAIN.post(() -> {
             navigating = on;
+            AtudoSpeedCamFetcher.setNavigating(on);
             listen();
             if (Shapes.flockAvoidPatched()) Steer.navigation(on);
         });
@@ -548,7 +549,49 @@ public final class SpeedCameras {
         Map<Integer, Object> lists = new HashMap<>();
         if (MAP) pins(out, lists, CAMERAS, l, MAX_CAMERA_PINS);
         if (FLOCK_MAP) pins(out, lists, FLOCKS, l, MAX_FLOCK_PINS);
+        // Also add Atudo live cameras from fetcher cache (merged separately from Overpass tiles)
+        if (MAP && AtudoSpeedCamFetcher.isLiveFeedEnabled()) {
+            addAtudoCameras(out, lists, l, MAX_CAMERA_PINS);
+        }
         return out;
+    }
+
+    private static void addAtudoCameras(List<Object> out, Map<Integer, Object> lists, Location l, int max) {
+        List<AtudoSpeedCamFetcher.AtudoCamera> atudoCams = AtudoSpeedCamFetcher.getActiveCameras();
+        if (atudoCams.isEmpty()) return;
+        final double lat = l.getLatitude(), lng = l.getLongitude();
+        // Sort by distance
+        atudoCams.sort((a, b) -> Double.compare(
+            sq(a.lat, a.lon, lat, lng),
+            sq(b.lat, b.lon, lat, lng)
+        ));
+        int added = 0;
+        for (AtudoSpeedCamFetcher.AtudoCamera acam : atudoCams) {
+            if (added >= max) break;
+            // Convert to internal Camera format
+            Camera cam = new Camera(
+                Math.abs(acam.id.hashCode()) + 9000000000L,
+                acam.lat, acam.lon,
+                acam.isRedLightCamera() ? RED_LIGHT : SPEED,
+                acam.speedLimit > 0 ? String.valueOf(acam.speedLimit) : ""
+            );
+            Object list = lists.get(cam.kind);
+            if (list == null && !lists.containsKey(cam.kind)) {
+                list = SavedOnMap.listInfo("ungoogled:cameras:" + cam.kind, "CUSTOM", listName(cam.kind), emoji(cam.kind));
+                lists.put(cam.kind, list);
+            }
+            String name = label(cam);
+            Object item = SavedOnMap.item(0, 0, cam.lat, cam.lng, name, name, 0, list, false);
+            if (item != null) {
+                out.add(item);
+                added++;
+            }
+        }
+    }
+
+    private static double sq(AtudoSpeedCamFetcher.AtudoCamera c, double lat, double lng) {
+        double dy = c.lat - lat, dx = (c.lon - lng) * Math.cos(Math.toRadians(lat));
+        return dx * dx + dy * dy;
     }
 
     private static void pins(List<Object> out, Map<Integer, Object> lists, Layer layer, Location l, int max) {
