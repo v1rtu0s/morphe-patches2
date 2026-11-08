@@ -50,6 +50,9 @@ jobs:
         with:
           packages: platforms;android-34 build-tools;34.0.0
 
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > local.properties
+
       - name: Install dependencies
         run: npm install
 
