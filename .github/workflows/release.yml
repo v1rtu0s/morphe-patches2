@@ -64,6 +64,9 @@ jobs:
         run: npm install
 
       - name: Build patches
+        env:
+          ORG_GRADLE_PROJECT_gpr_user: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_gpr_key: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew :patches:buildAndroid --no-daemon --info
 
       - name: Delete existing tag if present
