@@ -53,6 +53,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Build patches
+        run: ./gradlew :patches:buildAndroid --no-daemon
+
       - name: Delete existing tag if present
         run: |
           SEMVER_TAG="v1.2.0"
@@ -85,12 +88,6 @@ jobs:
         with:
           subject-name: 'Morphe Patches ${{ steps.release.outputs.new_release_git_tag }}'
           subject-path: patches/build/libs/patches-*.mpp
-
-      - name: Build patches artifact (Fallback)
-        if: steps.release.outputs.new_release_published != 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew :patches:buildAndroid --no-daemon
 
       - name: Upload patches artifact
         if: always()
