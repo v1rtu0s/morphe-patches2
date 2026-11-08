@@ -110,74 +110,81 @@ public class AtudoSpeedCamFetcher {
     }
 
     /**
-     * Triggered from the existing GPS Location update hook in the Maps extension.
-     */
-    public static void onLocationChanged(double lat, double lon, float speedMetersPerSec, Runnable onUpdateCallback) {
-            Log.i(TAG, "onLocationChanged: lat=" + lat + " lon=" + lon + " speed=" + speedMetersPerSec + " liveFeedEnabled=" + liveFeedEnabled + " isFetching=" + isFetching);
-            if (!liveFeedEnabled || isFetching) {
-                Log.i(TAG, "Early return: liveFeedEnabled=" + liveFeedEnabled + " isFetching=" + isFetching);
-                return;
-            }
-
-            long now = System.currentTimeMillis();
-
-            // 1. Do not poll if stationary (under ~7 km/h), unless we have never fetched before
-            if (!Double.isNaN(lastFetchLat) && speedMetersPerSec < 2.0f) {
-                Log.i(TAG, "Early return: stationary (speed=" + speedMetersPerSec + " < 2.0)");
-                return;
-            }
-
-            // 2. Check if user is approaching the edge of the cached bounding box
-            boolean nearBoxEdge = Double.isNaN(lastFetchLat)
-                    || lat < (cachedMinLat + EDGE_BUFFER_DEG)
-                    || lat > (cachedMaxLat - EDGE_BUFFER_DEG)
-                    || lon < (cachedMinLon + EDGE_BUFFER_DEG)
-                    || lon > (cachedMaxLon - EDGE_BUFFER_DEG);
-            Log.i(TAG, "nearBoxEdge=" + nearBoxEdge + " lastFetchLat=" + lastFetchLat + " cachedMinLat=" + cachedMinLat + " cachedMaxLat=" + cachedMaxLat + " cachedMinLon=" + cachedMinLon + " cachedMaxLon=" + cachedMaxLon);
-
-            // 3. Time + Distance Hysteresis Gate
-            if (!nearBoxEdge) {
-                if ((now - lastFetchTimeMs) < MIN_FETCH_INTERVAL_MS) {
-                    Log.i(TAG, "Early return: time hysteresis (now - lastFetchTimeMs)=" + (now - lastFetchTimeMs) + " < MIN_FETCH_INTERVAL_MS=" + MIN_FETCH_INTERVAL_MS);
+         * Triggered from the existing GPS Location update hook in the Maps extension.
+         */
+        public static void onLocationChanged(double lat, double lon, float speedMetersPerSec, Runnable onUpdateCallback) {
+                Log.i(TAG, "onLocationChanged: lat=" + lat + " lon=" + lon + " speed=" + speedMetersPerSec + " liveFeedEnabled=" + liveFeedEnabled + " isFetching=" + isFetching + " hasFetched=" + !Double.isNaN(lastFetchLat));
+                if (!liveFeedEnabled || isFetching) {
+                    Log.i(TAG, "Early return: liveFeedEnabled=" + liveFeedEnabled + " isFetching=" + isFetching);
                     return;
                 }
-                float[] dist = new float[1];
-                Location.distanceBetween(lastFetchLat, lastFetchLon, lat, lon, dist);
-                if (dist[0] < MIN_MOVEMENT_METERS) {
-                    Log.i(TAG, "Early return: distance hysteresis dist=" + dist[0] + " < MIN_MOVEMENT_METERS=" + MIN_MOVEMENT_METERS);
+
+                // ALWAYS fetch on first GPS fix if we haven't fetched yet
+                boolean firstFetch = Double.isNaN(lastFetchLat);
+                if (firstFetch) {
+                    Log.i(TAG, "First GPS fix - fetching immediately");
+                    fetchNow(lat, lon, onUpdateCallback);
                     return;
                 }
-            }
 
-            Log.i(TAG, "Proceeding to fetch: lat=" + lat + " lon=" + lon);
-            isFetching = true;
-            executor.execute(() -> {
-            try {
-                double minLat = lat - BOX_HALF_SPAN_DEG;
-                double maxLat = lat + BOX_HALF_SPAN_DEG;
-                double minLon = lon - BOX_HALF_SPAN_DEG;
-                double maxLon = lon + BOX_HALF_SPAN_DEG;
+                long now = System.currentTimeMillis();
 
-                List<AtudoCamera> fetched = fetchFromCdn(minLat, minLon, maxLat, maxLon);
-                if (fetched != null) {
-                    activeCameras = fetched;
-                    lastFetchTimeMs = System.currentTimeMillis();
-                    lastFetchLat = lat;
-                    lastFetchLon = lon;
-                    cachedMinLat = minLat;
-                    cachedMaxLat = maxLat;
-                    cachedMinLon = minLon;
-                    cachedMaxLon = maxLon;
+                // 1. Do not poll if stationary (under ~7 km/h)
+                if (speedMetersPerSec < 2.0f) {
+                    Log.i(TAG, "Early return: stationary (speed=" + speedMetersPerSec + " < 2.0)");
+                    return;
+                }
 
-                    Log.i(TAG, "Fetched " + fetched.size() + " live Blitzer.de POIs");
-                    if (onUpdateCallback != null) {
-                        onUpdateCallback.run();
+                // 2. Check if user is approaching the edge of the cached bounding box
+                boolean nearBoxEdge = lat < (cachedMinLat + EDGE_BUFFER_DEG)
+                        || lat > (cachedMaxLat - EDGE_BUFFER_DEG)
+                        || lon < (cachedMinLon + EDGE_BUFFER_DEG)
+                        || lon > (cachedMaxLon - EDGE_BUFFER_DEG);
+                Log.i(TAG, "nearBoxEdge=" + nearBoxEdge + " lastFetchLat=" + lastFetchLat + " cachedMinLat=" + cachedMinLat + " cachedMaxLat=" + cachedMaxLat + " cachedMinLon=" + cachedMinLon + " cachedMaxLon=" + cachedMaxLon);
+
+                // 3. Time + Distance Hysteresis Gate
+                if (!nearBoxEdge) {
+                    if ((now - lastFetchTimeMs) < MIN_FETCH_INTERVAL_MS) {
+                        Log.i(TAG, "Early return: time hysteresis (now - lastFetchTimeMs)=" + (now - lastFetchTimeMs) + " < MIN_FETCH_INTERVAL_MS=" + MIN_FETCH_INTERVAL_MS);
+                        return;
+                    }
+                    float[] dist = new float[1];
+                    Location.distanceBetween(lastFetchLat, lastFetchLon, lat, lon, dist);
+                    if (dist[0] < MIN_MOVEMENT_METERS) {
+                        Log.i(TAG, "Early return: distance hysteresis dist=" + dist[0] + " < MIN_MOVEMENT_METERS=" + MIN_MOVEMENT_METERS);
+                        return;
                     }
                 }
-            } finally {
-                isFetching = false;
-            }
-        });
+
+                Log.i(TAG, "Proceeding to fetch: lat=" + lat + " lon=" + lon);
+                isFetching = true;
+                executor.execute(() -> {
+                try {
+                    double minLat = lat - BOX_HALF_SPAN_DEG;
+                    double maxLat = lat + BOX_HALF_SPAN_DEG;
+                    double minLon = lon - BOX_HALF_SPAN_DEG;
+                    double maxLon = lon + BOX_HALF_SPAN_DEG;
+
+                    List<AtudoCamera> fetched = fetchFromCdn(minLat, minLon, maxLat, maxLon);
+                    if (fetched != null) {
+                        activeCameras = fetched;
+                        lastFetchTimeMs = System.currentTimeMillis();
+                        lastFetchLat = lat;
+                        lastFetchLon = lon;
+                        cachedMinLat = minLat;
+                        cachedMaxLat = maxLat;
+                        cachedMinLon = minLon;
+                        cachedMaxLon = maxLon;
+
+                        Log.i(TAG, "Fetched " + fetched.size() + " live Blitzer.de POIs");
+                        if (onUpdateCallback != null) {
+                            onUpdateCallback.run();
+                        }
+                    }
+                } finally {
+                    isFetching = false;
+                }
+            });
     }
 
     /**
