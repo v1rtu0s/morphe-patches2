@@ -201,44 +201,77 @@ public class AtudoSpeedCamFetcher {
     }
 
     /** Manual refresh triggered from the map button. Bypasses hysteresis, fetches now. */
-    public static void refreshNow(Context context, Runnable onComplete) {
-        if (!liveFeedEnabled) {
-            if (onComplete != null) onComplete.run();
-            return;
-        }
-        // Get last known location from the same source SpeedCameras uses
-        LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        if (lm == null) {
-            if (onComplete != null) onComplete.run();
-            return;
-        }
-        try {
-            Location known = null;
-            for (String p : lm.getAllProviders()) {
-                Location k = lm.getLastKnownLocation(p);
-                if (k != null && (known == null || k.getElapsedRealtimeNanos() > known.getElapsedRealtimeNanos())) {
-                    known = k;
-                }
+        public static void refreshNow(Context context, Runnable onComplete) {
+            if (!liveFeedEnabled) {
+                if (onComplete != null) onComplete.run();
+                return;
             }
-            if (known != null) {
-                // Force fetch by temporarily resetting the hysteresis
-                lastFetchTimeMs = 0;
-                lastFetchLat = Double.NaN;
-                lastFetchLon = Double.NaN;
-                onLocationChanged(known.getLatitude(), known.getLongitude(), known.getSpeed(), onComplete);
-            } else {
+            // Get last known location from the same source SpeedCameras uses
+            LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+            if (lm == null) {
+                if (onComplete != null) onComplete.run();
+                return;
+            }
+            try {
+                Location known = null;
+                for (String p : lm.getAllProviders()) {
+                    Location k = lm.getLastKnownLocation(p);
+                    if (k != null && (known == null || k.getElapsedRealtimeNanos() > known.getElapsedRealtimeNanos())) {
+                        known = k;
+                    }
+                }
+                if (known != null) {
+                    // Force fetch by temporarily resetting the hysteresis
+                    lastFetchTimeMs = 0;
+                    lastFetchLat = Double.NaN;
+                    lastFetchLon = Double.NaN;
+                    onLocationChanged(known.getLatitude(), known.getLongitude(), known.getSpeed(), onComplete);
+                } else {
+                    if (onComplete != null) onComplete.run();
+                }
+            } catch (Throwable t) {
+                Log.w(TAG, "Manual refresh failed", t);
                 if (onComplete != null) onComplete.run();
             }
-        } catch (Throwable t) {
-            Log.w(TAG, "Manual refresh failed", t);
-            if (onComplete != null) onComplete.run();
         }
-    }
 
-    /**
-     * Converts the Atudo JSON response into an Overpass-compatible JSON elements array string,
-     * allowing 1-line drop-in compatibility with bearinmindcat's existing Overpass OSM parser!
-     */
+        /** Internal: fetch immediately at given coordinates, bypassing hysteresis. */
+        private static void fetchNow(double lat, double lon, Runnable onUpdateCallback) {
+            Log.i(TAG, "Manual/first fetch at lat=" + lat + " lon=" + lon);
+            isFetching = true;
+            executor.execute(() -> {
+                try {
+                    double minLat = lat - BOX_HALF_SPAN_DEG;
+                    double maxLat = lat + BOX_HALF_SPAN_DEG;
+                    double minLon = lon - BOX_HALF_SPAN_DEG;
+                    double maxLon = lon + BOX_HALF_SPAN_DEG;
+
+                    List<AtudoCamera> fetched = fetchFromCdn(minLat, minLon, maxLat, maxLon);
+                    if (fetched != null) {
+                        activeCameras = fetched;
+                        lastFetchTimeMs = System.currentTimeMillis();
+                        lastFetchLat = lat;
+                        lastFetchLon = lon;
+                        cachedMinLat = lat - BOX_HALF_SPAN_DEG;
+                        cachedMaxLat = lat + BOX_HALF_SPAN_DEG;
+                        cachedMinLon = lon - BOX_HALF_SPAN_DEG;
+                        cachedMaxLon = lon + BOX_HALF_SPAN_DEG;
+
+                        Log.i(TAG, "Fetched " + fetched.size() + " live Blitzer.de POIs");
+                        if (onUpdateCallback != null) {
+                            onUpdateCallback.run();
+                        }
+                    }
+                } finally {
+                    isFetching = false;
+                }
+            });
+        }
+
+        /**
+         * Converts the Atudo JSON response into an Overpass-compatible JSON elements array string,
+         * allowing 1-line drop-in compatibility with bearinmindcat's existing Overpass OSM parser!
+         */
     public static JSONArray toOverpassElementsJson(List<AtudoCamera> cameras) {
         JSONArray elements = new JSONArray();
         if (!liveFeedEnabled) return elements;
